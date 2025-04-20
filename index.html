@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no">
+    <title>Lyrical IDE</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Roboto+Mono:wght@300;400;500&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="workspace">
+            <div class="files-panel" id="files-panel">
+                <div class="files-header">
+                    <h2>Your Lyrics</h2>
+                    <button id="new-file-btn" class="icon-btn sidebar-btn" title="New File">
+                        <span class="material-icons-round">add</span>
+                    </button>
+                </div>
+                <div class="files-list" id="files-list">
+                    
+                </div>
+                
+                
+                <div class="sidebar-settings">
+                    <div class="sidebar-footer">
+                        <a href="landing.html" class="sidebar-option" title="About Lyrical IDE">
+                            <span class="material-icons-round">info</span>
+                            <span>About</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="editor-panel sidebar-open" id="editor-panel">
+                <div class="editor-container">
+                    <div class="editor-wrapper">
+                        <textarea id="editor" placeholder="Write your lyrics here..."></textarea>
+                        
+                        
+                        <div class="save-indicator" id="save-indicator">
+                            <span class="material-icons-round">check_circle</span>
+                            <span>Saved</span>
+                        </div>
+                    </div>
+                    <div class="preview-wrapper" id="markdown-preview">
+                        
+                    </div>
+                </div>
+                
+                
+                <div class="floating-buttons">
+                    <button id="sidebar-toggle" class="floating-btn" title="Toggle Sidebar (Ctrl+\)">
+                        <span class="material-icons-round" id="toggle-icon">menu</span>
+                    </button>
+                    <button id="view-toggle" class="floating-btn" title="Toggle View (Ctrl+P)">
+                        <span class="material-icons-round" id="view-icon">preview</span>
+                    </button>
+                    <button id="rhyme-btn" class="floating-btn" title="Rhyme Suggestions (Ctrl+R)">
+                        <span class="material-icons-round">auto_awesome</span>
+                    </button>
+                    <button id="save-btn" class="floating-btn" title="Save (Ctrl+S)">
+                        <span class="material-icons-round">save</span>
+                    </button>
+                    <button id="export-btn" class="floating-btn" title="Export (Ctrl+E)">
+                        <span class="material-icons-round">download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="save-modal" class="modal">
+        <div class="modal-content">
+            <h3>Save Lyrics</h3>
+            <input type="text" id="save-filename" placeholder="Title your lyrics">
+            <div class="modal-buttons">
+                <button id="save-cancel-btn" class="btn-secondary">
+                    <span class="material-icons-round">close</span>
+                    Cancel
+                </button>
+                <button id="save-confirm-btn" class="btn-primary">
+                    <span class="material-icons-round">save</span>
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="export-modal" class="modal">
+        <div class="modal-content">
+            <h3>Export Lyrics</h3>
+            <div class="export-options">
+                <div class="export-option">
+                    <label>
+                        <input type="radio" name="export-format" value="md" checked>
+                        <span class="option-label">
+                            <span class="material-icons-round">description</span>
+                            Markdown (.md)
+                        </span>
+                        <span class="format-description">Keeps all markdown formatting for future editing</span>
+                        <span class="option-background"></span>
+                    </label>
+                </div>
+                <div class="export-option">
+                    <label>
+                        <input type="radio" name="export-format" value="txt">
+                        <span class="option-label">
+                            <span class="material-icons-round">text_snippet</span>
+                            Plain Text (.txt)
+                        </span>
+                        <span class="format-description">Simple text format compatible with any text editor</span>
+                        <span class="option-background"></span>
+                    </label>
+                </div>
+                <div class="export-option">
+                    <label>
+                        <input type="radio" name="export-format" value="html">
+                        <span class="option-label">
+                            <span class="material-icons-round">code</span>
+                            HTML (.html)
+                        </span>
+                        <span class="format-description">Styled web page with all formatting preserved</span>
+                        <span class="option-background"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="export-cancel-btn" class="btn-secondary">
+                    <span class="material-icons-round">close</span>
+                    Cancel
+                </button>
+                <button id="export-confirm-btn" class="btn-primary">
+                    <span class="material-icons-round">download</span>
+                    Export
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h3>Settings</h3>
+            <div class="settings-section">
+                <h4>
+                    <span class="material-icons-round">edit</span>
+                    Editor
+                </h4>
+                <div class="settings-option">
+                    <label>
+                        <input type="checkbox" id="setting-autosave" checked>
+                        <span class="option-label">Auto-save (every 3 seconds)</span>
+                    </label>
+                </div>
+                <div class="settings-option">
+                    <label>
+                        <input type="checkbox" id="setting-spellcheck" checked>
+                        <span class="option-label">Spell check</span>
+                    </label>
+                </div>
+                <div class="settings-option">
+                    <label>Font Size</label>
+                    <select id="setting-font-size">
+                        <option value="small">Small</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="large">Large</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="settings-cancel-btn" class="btn-secondary">
+                    <span class="material-icons-round">close</span>
+                    Cancel
+                </button>
+                <button id="settings-confirm-btn" class="btn-primary">
+                    <span class="material-icons-round">check</span>
+                    Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="shortcuts-modal" class="modal">
+        <div class="modal-content">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcuts-grid">
+                <div class="shortcut">
+                    <span class="keys">Ctrl+S</span>
+                    <span class="description">Save</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+E</span>
+                    <span class="description">Export</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+\</span>
+                    <span class="description">Toggle Sidebar</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+P</span>
+                    <span class="description">Toggle Preview</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+N</span>
+                    <span class="description">New File</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+R</span>
+                    <span class="description">Rhyme Suggestions</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+B</span>
+                    <span class="description">Bold Text</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+I</span>
+                    <span class="description">Italic Text</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+H</span>
+                    <span class="description">Heading</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+L</span>
+                    <span class="description">List Item</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+Q</span>
+                    <span class="description">Quote (for chorus)</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Ctrl+K</span>
+                    <span class="description">Keyboard Shortcuts</span>
+                </div>
+                <div class="shortcut">
+                    <span class="keys">Esc</span>
+                    <span class="description">Close dialogs</span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="shortcuts-close-btn" class="btn-primary">
+                    <span class="material-icons-round">check</span>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="rhyme-modal" class="modal">
+        <div class="modal-content">
+            <h3>Rhyme Suggestions</h3>
+            <div id="api-key-section">
+                <p class="modal-description">Enter your Groq API key to enable AI-powered rhyme suggestions.</p>
+                <input type="password" id="groq-api-key" placeholder="Enter Groq API key">
+                <div class="api-key-info">
+                    <span class="material-icons-round">info</span>
+                    <span>Your API key is stored locally and never sent to our servers</span>
+                </div>
+                <div class="modal-buttons">
+                    <button id="rhyme-cancel-btn" class="btn-secondary">
+                        <span class="material-icons-round">close</span>
+                        Cancel
+                    </button>
+                    <button id="save-api-key-btn" class="btn-primary">
+                        <span class="material-icons-round">check</span>
+                        Save Key
+                    </button>
+                </div>
+            </div>
+            <div id="rhyme-suggestion-section" style="display: none;">
+                <div class="rhyme-input-container">
+                    <span class="material-icons-round search-icon" id="search-icon-btn">search</span>
+                    <input type="text" id="rhyme-word-input" placeholder="Enter A Word">
+                </div>
+                <div id="rhyme-results">
+                    <div class="rhyme-results-placeholder">Enter a word above to get rhyme suggestions</div>
+                </div>
+                <div class="rhyme-loading" id="rhyme-loading">
+                    <div class="rhyme-spinner"></div>
+                    <span>Generating suggestions...</span>
+                </div>
+                <div class="modal-buttons">
+                    <button id="manage-api-key-btn" class="btn-secondary">
+                        <span class="material-icons-round">key</span>
+                        Manage API Key
+                    </button>
+                    <button id="rhyme-close-btn" class="btn-secondary">
+                        <span class="material-icons-round">close</span>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/script.js"></script>
+</body>
+</html>
