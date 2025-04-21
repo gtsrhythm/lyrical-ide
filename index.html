@@ -9,24 +9,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Roboto+Mono:wght@300;400;500&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="workspace">
+            <!-- Files Panel -->
             <div class="files-panel" id="files-panel">
                 <div class="files-header">
                     <h2>Your Lyrics</h2>
-                    <button id="new-file-btn" class="icon-btn sidebar-btn" title="New File">
-                        <span class="material-icons-round">add</span>
-                    </button>
+                    <div class="files-actions">
+                        <button id="import-file-btn" class="icon-btn sidebar-btn" title="Import File">
+                            <span class="material-icons-round">upload_file</span>
+                        </button>
+                        <button id="new-file-btn" class="icon-btn sidebar-btn" title="New File">
+                            <span class="material-icons-round">add</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="files-list" id="files-list">
-                    
-                </div>
-                
-                
+                <div class="files-list" id="files-list"></div>
                 <div class="sidebar-settings">
                     <div class="sidebar-footer">
                         <a href="landing.html" class="sidebar-option" title="About Lyrical IDE">
@@ -37,23 +38,20 @@
                 </div>
             </div>
             
+            <!-- Editor Panel -->
             <div class="editor-panel sidebar-open" id="editor-panel">
                 <div class="editor-container">
                     <div class="editor-wrapper">
                         <textarea id="editor" placeholder="Write your lyrics here..."></textarea>
-                        
-                        
                         <div class="save-indicator" id="save-indicator">
                             <span class="material-icons-round">check_circle</span>
                             <span>Saved</span>
                         </div>
                     </div>
-                    <div class="preview-wrapper" id="markdown-preview">
-                        
-                    </div>
+                    <div class="preview-wrapper" id="markdown-preview"></div>
                 </div>
                 
-                
+                <!-- Floating Buttons -->
                 <div class="floating-buttons">
                     <button id="sidebar-toggle" class="floating-btn" title="Toggle Sidebar (Ctrl+\)">
                         <span class="material-icons-round" id="toggle-icon">menu</span>
@@ -75,7 +73,8 @@
         </div>
     </div>
 
-    
+    <!-- Modals -->
+    <!-- Save Modal -->
     <div id="save-modal" class="modal">
         <div class="modal-content">
             <h3>Save Lyrics</h3>
@@ -93,7 +92,7 @@
         </div>
     </div>
 
-    
+    <!-- Export Modal -->
     <div id="export-modal" class="modal">
         <div class="modal-content">
             <h3>Export Lyrics</h3>
@@ -145,7 +144,7 @@
         </div>
     </div>
 
-    
+    <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <h3>Settings</h3>
@@ -188,7 +187,7 @@
         </div>
     </div>
 
-    
+    <!-- Shortcuts Modal -->
     <div id="shortcuts-modal" class="modal">
         <div class="modal-content">
             <h3>Keyboard Shortcuts</h3>
@@ -255,7 +254,7 @@
         </div>
     </div>
 
-    
+    <!-- Rhyme Modal -->
     <div id="rhyme-modal" class="modal">
         <div class="modal-content">
             <h3>Rhyme Suggestions</h3>
@@ -299,6 +298,39 @@
                         Close
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal">
+        <div class="modal-content">
+            <h3>Import Lyrics</h3>
+            <p class="modal-description">Import lyrics from Markdown (.md) or Text (.txt) files.</p>
+            
+            <div class="file-upload-container">
+                <label for="file-upload" class="file-upload-label">
+                    <span class="material-icons-round">upload_file</span>
+                    <span>Choose a file or drag it here</span>
+                </label>
+                <input type="file" id="file-upload" accept=".md,.txt" class="file-upload-input">
+                <div id="file-upload-info" class="file-upload-info">
+                    <span id="file-name"></span>
+                    <button id="clear-file" class="clear-file-btn">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="import-cancel-btn" class="btn-secondary">
+                    <span class="material-icons-round">close</span>
+                    Cancel
+                </button>
+                <button id="import-confirm-btn" class="btn-primary" disabled>
+                    <span class="material-icons-round">file_download</span>
+                    Import
+                </button>
             </div>
         </div>
     </div>

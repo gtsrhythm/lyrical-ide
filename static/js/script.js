@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-
+    // Cache DOM elements
     const editor = document.getElementById('editor');
-    const fileTitle = document.getElementById('file-title');
     const filesList = document.getElementById('files-list');
     const newFileBtn = document.getElementById('new-file-btn');
     const saveBtn = document.getElementById('save-btn');
@@ -31,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingAutosave = document.getElementById('setting-autosave');
     const settingSpellcheck = document.getElementById('setting-spellcheck');
 
+    // Rhyme functionality elements
     const rhymeBtn = document.getElementById('rhyme-btn');
     const rhymeModal = document.getElementById('rhyme-modal');
     const apiKeySection = document.getElementById('api-key-section');
@@ -40,11 +40,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const rhymeCancelBtn = document.getElementById('rhyme-cancel-btn');
     const rhymeCloseBtn = document.getElementById('rhyme-close-btn');
     const rhymeWordInput = document.getElementById('rhyme-word-input');
-    const getRhymesBtn = document.getElementById('get-rhymes-btn');
     const rhymeResults = document.getElementById('rhyme-results');
     const rhymeLoading = document.getElementById('rhyme-loading');
     const manageApiKeyBtn = document.getElementById('manage-api-key-btn');
 
+    // Import modal elements
+    const importModal = document.getElementById('import-modal');
+    const importFileBtn = document.getElementById('import-file-btn');
+    const importCancelBtn = document.getElementById('import-cancel-btn');
+    const importConfirmBtn = document.getElementById('import-confirm-btn');
+    const fileUpload = document.getElementById('file-upload');
+    const fileUploadInfo = document.getElementById('file-upload-info');
+    const fileName = document.getElementById('file-name');
+    const clearFileBtn = document.getElementById('clear-file');
+    const fileUploadLabel = document.querySelector('.file-upload-label');
+
+    // App state
     let currentFileId = null;
     let files = [];
     let sidebarOpen = true;
@@ -58,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fontSize: 'medium',
     };
 
+    // Configure marked renderer
     marked.setOptions({
         breaks: true,        
         gfm: true,           
@@ -68,29 +80,14 @@ document.addEventListener('DOMContentLoaded', () => {
         smartypants: true,   
         xhtml: false,        
         renderer: (() => {
-
             const renderer = new marked.Renderer();
-
+            
             renderer.blockquote = function(quote) {
-
                 if (typeof quote === 'object') {
-
-                    if (quote.text) {
-                        return `<blockquote>${quote.text}</blockquote>`;
-                    }
-
-                    if (quote.innerHTML) {
-                        return `<blockquote>${quote.innerHTML}</blockquote>`;
-                    }
+                    if (quote.text) return `<blockquote>${quote.text}</blockquote>`;
+                    if (quote.innerHTML) return `<blockquote>${quote.innerHTML}</blockquote>`;
                 }
-
                 return `<blockquote>${String(quote)}</blockquote>`;
-            };
-
-            const originalListitem = renderer.listitem;
-            renderer.listitem = function(text, task, checked) {
-
-                return originalListitem.call(this, text, task, checked);
             };
 
             return renderer;
@@ -106,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (files.length > 0) {
             loadFile(files[0].id);
         } else {
-
             currentFileId = null;
             editor.value = '';
             editor.setAttribute('data-filename', '');
@@ -116,32 +112,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         checkMobileView();
 
+        // Set sidebar state
         if (!isMobile) {
             const savedSidebarState = localStorage.getItem('lyrical-sidebar-state');
-            if (savedSidebarState === 'closed') {
-                toggleSidebar(false);
-            }
+            if (savedSidebarState === 'closed') toggleSidebar(false);
         } else {
-
             toggleSidebar(false);
         }
 
+        // Set view state
         const savedViewState = localStorage.getItem('lyrical-view-state');
         if (savedViewState) {
             currentView = savedViewState;
             updateViewMode(currentView);
-        } else {
-
-            if (isMobile) {
-                currentView = 'editor-only';
-            }
+        } else if (isMobile) {
+            currentView = 'editor-only';
             updateViewMode(currentView);
         }
 
         setupEventListeners();
-
         setupRhymeSuggestionsListeners();
-
+        setupMobileScrolling();
         updateStats();
     }
 
@@ -157,19 +148,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applySettings() {
-
         document.body.classList.remove('editor-font-small', 'editor-font-medium', 'editor-font-large');
         document.body.classList.add(`editor-font-${settings.fontSize}`);
-
         editor.spellcheck = settings.spellcheck;
-
         settingFontSize.value = settings.fontSize;
         settingAutosave.checked = settings.autosave;
         settingSpellcheck.checked = settings.spellcheck;
     }
 
     function setupEventListeners() {
-
+        // Basic file operations
         newFileBtn.addEventListener('click', newFile);
         saveBtn.addEventListener('click', showSaveModal);
         exportBtn.addEventListener('click', showExportModal);
@@ -178,22 +166,31 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarToggle.addEventListener('click', () => toggleSidebar());
         viewToggle.addEventListener('click', toggleView);
 
+        // Import functionality
+        importFileBtn.addEventListener('click', showImportModal);
+        importCancelBtn.addEventListener('click', hideImportModal);
+        importConfirmBtn.addEventListener('click', importFile);
+        fileUpload.addEventListener('change', handleFileSelect);
+        clearFileBtn.addEventListener('click', clearSelectedFile);
+        setupDragAndDrop();
+
+        // Export functionality
         exportConfirmBtn.addEventListener('click', exportCurrentFile);
         exportCancelBtn.addEventListener('click', hideExportModal);
         shortcutsCloseBtn.addEventListener('click', hideShortcutsModal);
 
+        // Toolbar formatting
         toolbarButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 applyFormatting(btn.getAttribute('data-markdown'));
             });
         });
 
+        // Editor changes
         editor.addEventListener('input', () => {
             if (currentFileId) {
-
                 updateFileContent(currentFileId, editor.value);
                 renderMarkdown();
-
                 updateStats();
 
                 if (settings.autosave) {
@@ -206,71 +203,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-
-                if (e.key === 'Escape') {
-                    hideAllModals();
-                }
+                if (e.key === 'Escape') hideAllModals();
                 return;
             }
 
             if (e.ctrlKey || e.metaKey) {
                 switch (e.key) {
-                    case 's':
-                        e.preventDefault();
-                        showSaveModal();
-                        break;
-                    case 'e':
-                        e.preventDefault();
-                        showExportModal();
-                        break;
-                    case '\\':
-                        e.preventDefault();
-                        toggleSidebar();
-                        break;
-                    case 'p':
-                        e.preventDefault();
-                        toggleView();
-                        break;
-                    case 'n':
-                        e.preventDefault();
-                        newFile();
-                        break;
-                    case 'b':
+                    case 's': e.preventDefault(); showSaveModal(); break;
+                    case 'e': e.preventDefault(); showExportModal(); break;
+                    case '\\': e.preventDefault(); toggleSidebar(); break;
+                    case 'p': e.preventDefault(); toggleView(); break;
+                    case 'n': e.preventDefault(); newFile(); break;
+                    case 'k': e.preventDefault(); showShortcutsModal(); break;
+                    case 'b': 
+                    case 'i': 
+                    case 'h': 
+                    case 'l': 
+                    case 'q': 
                         e.preventDefault();
                         if (document.activeElement === editor) {
-                            applyFormatting('**');
+                            const formatMap = {
+                                'b': '**',
+                                'i': '_',
+                                'h': '# ',
+                                'l': '- ',
+                                'q': '> '
+                            };
+                            applyFormatting(formatMap[e.key]);
                         }
-                        break;
-                    case 'i':
-                        e.preventDefault();
-                        if (document.activeElement === editor) {
-                            applyFormatting('_');
-                        }
-                        break;
-                    case 'h':
-                        e.preventDefault();
-                        if (document.activeElement === editor) {
-                            applyFormatting('# ');
-                        }
-                        break;
-                    case 'l':
-                        e.preventDefault();
-                        if (document.activeElement === editor) {
-                            applyFormatting('- ');
-                        }
-                        break;
-                    case 'q':
-                        e.preventDefault();
-                        if (document.activeElement === editor) {
-                            applyFormatting('> ');
-                        }
-                        break;
-                    case 'k':
-                        e.preventDefault();
-                        showShortcutsModal();
                         break;
                 }
             } else if (e.key === 'Escape') {
@@ -278,32 +241,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Window resize
         window.addEventListener('resize', () => {
             const wasMobile = isMobile;
             isMobile = window.innerWidth < 768;
-
-            if (wasMobile !== isMobile) {
-                checkMobileView();
-            }
+            if (wasMobile !== isMobile) checkMobileView();
         });
 
-        if ('ontouchstart' in window) {
-            setupTouchHandlers();
-        }
+        // Touch handlers
+        if ('ontouchstart' in window) setupTouchHandlers();
 
+        // Click outside handlers
         document.addEventListener('click', (e) => {
+            // Handle filename editing
             if (editingFilename && !e.target.classList.contains('file-name-edit')) {
                 const inputEl = document.querySelector('.file-name-edit');
                 if (inputEl) {
                     const newTitle = inputEl.value.trim();
-                    if (newTitle) {
-                        updateFileTitle(editingFilename, newTitle);
-                    }
+                    if (newTitle) updateFileTitle(editingFilename, newTitle);
                     editingFilename = null;
                     renderFilesList();
                 }
             }
 
+            // Handle mobile sidebar
             if (isMobile && sidebarOpen && !e.target.closest('#files-panel') && !e.target.closest('#sidebar-toggle')) {
                 toggleSidebar(false);
             }
@@ -311,48 +272,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupRhymeSuggestionsListeners() {
-
         rhymeBtn.addEventListener('click', showRhymeModal);
 
+        // Check for saved API key
         const savedApiKey = localStorage.getItem('groq-api-key');
         if (savedApiKey) {
-
             apiKeySection.style.display = 'none';
             rhymeSuggestionSection.style.display = 'block';
-
             groqApiKeyInput.value = '';
         }
 
+        // API key management
         saveApiKeyBtn.addEventListener('click', () => {
             const apiKey = groqApiKeyInput.value.trim();
             if (apiKey) {
-
                 localStorage.setItem('groq-api-key', apiKey);
-
                 apiKeySection.style.display = 'none';
                 rhymeSuggestionSection.style.display = 'block';
                 rhymeWordInput.focus();
             }
         });
 
+        // Modal controls
         rhymeCancelBtn.addEventListener('click', hideRhymeModal);
         rhymeCloseBtn.addEventListener('click', hideRhymeModal);
-
         manageApiKeyBtn.addEventListener('click', () => {
-
             rhymeSuggestionSection.style.display = 'none';
             apiKeySection.style.display = 'block';
             groqApiKeyInput.focus();
         });
 
+        // Rhyme search
         document.getElementById('search-icon-btn').addEventListener('click', getRhymeSuggestions);
-
         rhymeWordInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                getRhymeSuggestions();
-            }
+            if (e.key === 'Enter') getRhymeSuggestions();
         });
 
+        // Keyboard shortcut
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'r' && 
                 e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
@@ -367,6 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hideExportModal();
         hideShortcutsModal();
         hideRhymeModal();
+        hideImportModal();
     }
 
     function applyFormatting(format) {
@@ -380,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let newCursorPos = 0;
 
         if (format === '# ' || format === '- ' || format === '> ') {
-
+            // Block formatting (heading, list, quote)
             let lineStart = start;
             while (lineStart > 0 && editor.value.charAt(lineStart - 1) !== '\n') {
                 lineStart--;
@@ -389,41 +346,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const alreadyApplied = editor.value.substring(lineStart, lineStart + format.length) === format;
 
             if (alreadyApplied) {
-
                 formattedText = editor.value.substring(0, lineStart) + 
                                editor.value.substring(lineStart + format.length);
                 newCursorPos = Math.max(lineStart, end - format.length);
             } else {
-
                 formattedText = editor.value.substring(0, lineStart) + 
                                format +
                                editor.value.substring(lineStart);
                 newCursorPos = end + format.length;
             }
-        }
-
-        else {
+        } else {
+            // Inline formatting (bold, italic)
             if (selection) {
-
                 const alreadyFormatted = 
                     editor.value.substring(start - format.length, start) === format && 
                     editor.value.substring(end, end + format.length) === format;
 
                 if (alreadyFormatted) {
-
                     formattedText = editor.value.substring(0, start - format.length) + 
                                    selection +
                                    editor.value.substring(end + format.length);
                     newCursorPos = start - format.length + selection.length;
                 } else {
-
                     formattedText = editor.value.substring(0, start) + 
                                    format + selection + format +
                                    editor.value.substring(end);
                     newCursorPos = end + format.length * 2;
                 }
             } else {
-
                 formattedText = editor.value.substring(0, start) + 
                                format + format +
                                editor.value.substring(end);
@@ -434,20 +384,18 @@ document.addEventListener('DOMContentLoaded', () => {
         editor.value = formattedText;
         editor.focus();
         editor.setSelectionRange(newCursorPos, newCursorPos);
-
+        
+        // Trigger input event to update preview
         const inputEvent = new Event('input', { bubbles: true });
         editor.dispatchEvent(inputEvent);
     }
 
     function showSaveIndicator() {
         saveIndicator.classList.add('show');
-        setTimeout(() => {
-            saveIndicator.classList.remove('show');
-        }, 2000);
+        setTimeout(() => saveIndicator.classList.remove('show'), 2000);
     }
 
     function updateStats() {
-
         if (!wordCount || !lineCount) return;
 
         if (!editor.value) {
@@ -468,15 +416,11 @@ document.addEventListener('DOMContentLoaded', () => {
         isMobile = window.innerWidth < 768;
 
         if (isMobile) {
-
             if (currentView === 'split-view') {
                 currentView = 'editor-only';
                 updateViewMode(currentView);
             }
-
-            if (sidebarOpen) {
-                toggleSidebar(false);
-            }
+            if (sidebarOpen) toggleSidebar(false);
         }
     }
 
@@ -487,23 +431,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
-        }, false);
+        }, { passive: true });
 
         document.addEventListener('touchend', (e) => {
             touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        }, false);
-
-        function handleSwipe() {
-
+            
+            // Handle swipe for sidebar
             if (touchStartX - touchEndX > swipeThreshold && sidebarOpen && isMobile) {
                 toggleSidebar(false);
-            }
-
-            if (touchEndX - touchStartX > swipeThreshold && !sidebarOpen && isMobile) {
+            } else if (touchEndX - touchStartX > swipeThreshold && !sidebarOpen && isMobile) {
                 toggleSidebar(true);
             }
-        }
+        }, { passive: true });
     }
 
     function renderMarkdown() {
@@ -513,8 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const htmlContent = marked.parse(editor.value);
-            markdownPreview.innerHTML = htmlContent;
+            markdownPreview.innerHTML = marked.parse(editor.value);
         } catch (error) {
             console.error('Error rendering markdown:', error);
             markdownPreview.innerHTML = '<div class="error-preview">Error rendering preview.</div>';
@@ -525,15 +463,12 @@ document.addEventListener('DOMContentLoaded', () => {
         switch (currentView) {
             case 'editor-only':
                 currentView = isMobile ? 'preview-only' : 'split-view';
-                viewIcon.textContent = 'preview';
                 break;
             case 'split-view':
                 currentView = 'preview-only';
-                viewIcon.textContent = 'edit';
                 break;
             case 'preview-only':
                 currentView = 'editor-only';
-                viewIcon.textContent = isMobile ? 'preview' : 'splitscreen';
                 break;
         }
 
@@ -565,19 +500,16 @@ document.addEventListener('DOMContentLoaded', () => {
             filesPanel.classList.remove('collapsed');
             editorPanel.classList.add('sidebar-open');
             toggleIcon.textContent = 'menu_open';
-            if (!isMobile) {
-                localStorage.setItem('lyrical-sidebar-state', 'open');
-            }
+            if (!isMobile) localStorage.setItem('lyrical-sidebar-state', 'open');
         } else {
             filesPanel.classList.add('collapsed');
             editorPanel.classList.remove('sidebar-open');
             toggleIcon.textContent = 'menu';
-            if (!isMobile) {
-                localStorage.setItem('lyrical-sidebar-state', 'closed');
-            }
+            if (!isMobile) localStorage.setItem('lyrical-sidebar-state', 'closed');
         }
     }
 
+    // Modal functions
     function showSaveModal() {
         const currentFile = files.find(f => f.id === currentFileId);
         saveFilename.value = currentFile ? currentFile.title : '';
@@ -609,17 +541,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveSettingsAndClose() {
-
         settings.fontSize = settingFontSize.value;
         settings.autosave = settingAutosave.checked;
         settings.spellcheck = settingSpellcheck.checked;
-
         saveSettings();
         applySettings();
-
-        hideSettingsModal();
     }
 
+    // Storage functions
     function loadFilesFromStorage() {
         const storedFiles = localStorage.getItem('lyrical-files');
         files = storedFiles ? JSON.parse(storedFiles) : [];
@@ -629,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('lyrical-files', JSON.stringify(files));
     }
 
+    // File operations
     function newFile() {
         const newFileObj = {
             id: Date.now().toString(),
@@ -642,72 +572,60 @@ document.addEventListener('DOMContentLoaded', () => {
         saveFilesToStorage();
         renderFilesList();
         loadFile(newFileObj.id);
-
         enableEditor();
 
-        setTimeout(() => {
-            startEditingFilename(newFileObj.id);
-        }, 100);
+        setTimeout(() => startEditingFilename(newFileObj.id), 100);
     }
 
     function loadFile(fileId) {
         const file = files.find(f => f.id === fileId);
+        if (!file) return;
+        
+        currentFileId = file.id;
+        editor.value = file.content;
+        editor.setAttribute('data-filename', file.title);
+        document.title = `${file.title} - Lyrical IDE`;
 
-        if (file) {
-            currentFileId = file.id;
-            editor.value = file.content;
+        // Update active file in UI
+        document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active'));
+        const fileElement = document.getElementById(`file-${fileId}`);
+        if (fileElement) fileElement.classList.add('active');
 
-            editor.setAttribute('data-filename', file.title);
-
-            document.title = `${file.title} - Lyrical IDE`;
-
-            document.querySelectorAll('.file-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            const fileElement = document.getElementById(`file-${fileId}`);
-            if (fileElement) {
-                fileElement.classList.add('active');
-            }
-
-            enableEditor();
-
-            renderMarkdown();
-
-            updateStats();
-        }
+        enableEditor();
+        renderMarkdown();
+        updateStats();
     }
 
     function updateFileContent(fileId, content) {
         const fileIndex = files.findIndex(f => f.id === fileId);
-        if (fileIndex !== -1) {
-            files[fileIndex].content = content;
-            files[fileIndex].updatedAt = new Date().toISOString();
+        if (fileIndex === -1) return;
+        
+        files[fileIndex].content = content;
+        files[fileIndex].updatedAt = new Date().toISOString();
 
-            if (!settings.autosave) return;
+        if (!settings.autosave) return;
 
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                saveFilesToStorage();
-                showSaveIndicator();
-            }, 3000);
-        }
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            saveFilesToStorage();
+            showSaveIndicator();
+        }, 3000);
     }
 
     function updateFileTitle(fileId, title) {
         const fileIndex = files.findIndex(f => f.id === fileId);
-        if (fileIndex !== -1) {
-            files[fileIndex].title = title || 'Untitled Lyrics';
-            files[fileIndex].updatedAt = new Date().toISOString();
-            saveFilesToStorage();
+        if (fileIndex === -1) return;
+        
+        files[fileIndex].title = title || 'Untitled Lyrics';
+        files[fileIndex].updatedAt = new Date().toISOString();
+        saveFilesToStorage();
 
-            if (fileId === currentFileId) {
-                document.title = `${files[fileIndex].title} - Lyrical IDE`;
-                editor.setAttribute('data-filename', files[fileIndex].title);
-            }
-
-            renderFilesList();
+        if (fileId === currentFileId) {
+            document.title = `${files[fileIndex].title} - Lyrical IDE`;
+            editor.setAttribute('data-filename', files[fileIndex].title);
         }
+
+        renderFilesList();
     }
 
     function startEditingFilename(fileId) {
@@ -718,7 +636,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = document.querySelector('.file-name-edit');
             if (input) {
                 input.focus();
-
                 input.selectionStart = input.selectionEnd = input.value.length;
             }
         }, 50);
@@ -726,21 +643,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function deleteFile(fileId) {
         const fileIndex = files.findIndex(f => f.id === fileId);
-        if (fileIndex !== -1) {
-            files.splice(fileIndex, 1);
-            saveFilesToStorage();
-            renderFilesList();
+        if (fileIndex === -1) return;
+        
+        files.splice(fileIndex, 1);
+        saveFilesToStorage();
+        renderFilesList();
 
-            if (files.length > 0) {
-                loadFile(files[0].id);
-            } else {
-
-                currentFileId = null;
-                editor.value = '';
-                editor.setAttribute('data-filename', '');
-                document.title = 'Lyrical IDE';
-                disableEditor();
-            }
+        if (files.length > 0) {
+            loadFile(files[0].id);
+        } else {
+            currentFileId = null;
+            editor.value = '';
+            editor.setAttribute('data-filename', '');
+            document.title = 'Lyrical IDE';
+            disableEditor();
         }
     }
 
@@ -762,9 +678,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = files.find(f => f.id === currentFileId);
         if (!file) return;
 
+        // Get selected format
         const formatRadios = document.getElementsByName('export-format');
         let selectedFormat = 'md';
-
         for (const radio of formatRadios) {
             if (radio.checked) {
                 selectedFormat = radio.value;
@@ -775,10 +691,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let content = file.content;
         let mimeType = 'text/plain';
 
+        // Handle HTML export
         if (selectedFormat === 'html') {
-
             content = marked.parse(file.content);
-
             content = `<!DOCTYPE html>
 <html>
 <head>
@@ -810,14 +725,15 @@ document.addEventListener('DOMContentLoaded', () => {
             mimeType = 'text/html';
         }
 
+        // Create download
         const blob = new Blob([content], { type: mimeType });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = `${file.title || 'lyrics'}.${selectedFormat}`;
-
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
 
         hideExportModal();
     }
@@ -832,7 +748,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editor.setAttribute('disabled', 'disabled');
         editor.placeholder = 'Select or create a file to start writing...';
         editor.classList.add('editor-disabled');
-
         markdownPreview.innerHTML = '';
     }
 
@@ -840,7 +755,6 @@ document.addEventListener('DOMContentLoaded', () => {
         filesList.innerHTML = '';
 
         if (files.length === 0) {
-
             const emptyState = document.createElement('div');
             emptyState.className = 'empty-state';
             emptyState.innerHTML = `
@@ -856,9 +770,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileItem = document.createElement('div');
             fileItem.id = `file-${file.id}`;
             fileItem.className = 'file-item';
-            if (file.id === currentFileId) {
-                fileItem.classList.add('active');
-            }
+            if (file.id === currentFileId) fileItem.classList.add('active');
 
             if (editingFilename === file.id) {
                 fileItem.innerHTML = `
@@ -872,9 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputEl.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         const newTitle = inputEl.value.trim();
-                        if (newTitle) {
-                            updateFileTitle(file.id, newTitle);
-                        }
+                        if (newTitle) updateFileTitle(file.id, newTitle);
                         editingFilename = null;
                         renderFilesList();
                     } else if (e.key === 'Escape') {
@@ -890,16 +800,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="file-action-btn delete" title="Delete"><span class="material-icons-round">delete</span></button>
                     </span>
                 `;
-            }
-
-            if (editingFilename !== file.id) {
 
                 fileItem.addEventListener('click', (e) => {
                     const isButton = e.target.closest('.file-action-btn');
-
                     if (isButton) {
                         e.stopPropagation(); 
-
                         if (isButton.classList.contains('delete')) {
                             deleteFile(file.id);
                         } else if (isButton.classList.contains('edit-btn')) {
@@ -908,11 +813,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
-                    if (e.target.classList.contains('file-name') && file.id === currentFileId) {
-                        if (e.detail === 2) { 
-                            startEditingFilename(file.id);
-                            return;
-                        }
+                    if (e.target.classList.contains('file-name') && file.id === currentFileId && e.detail === 2) {
+                        startEditingFilename(file.id);
+                        return;
                     }
 
                     loadFile(file.id);
@@ -923,9 +826,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Rhyme functionality
     function showRhymeModal() {
         rhymeModal.classList.add('show');
-
         const savedApiKey = localStorage.getItem('groq-api-key');
         if (savedApiKey) {
             rhymeWordInput.focus();
@@ -936,7 +839,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hideRhymeModal() {
         rhymeModal.classList.remove('show');
-
         rhymeWordInput.value = '';
         rhymeResults.innerHTML = '<div class="rhyme-results-placeholder">Enter a word above to get rhyme suggestions</div>';
     }
@@ -947,7 +849,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const apiKey = localStorage.getItem('groq-api-key');
         if (!apiKey) {
-
             apiKeySection.style.display = 'block';
             rhymeSuggestionSection.style.display = 'none';
             return;
@@ -957,7 +858,6 @@ document.addEventListener('DOMContentLoaded', () => {
         rhymeResults.innerHTML = '';
 
         try {
-
             const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -989,18 +889,15 @@ document.addEventListener('DOMContentLoaded', () => {
             let rhymes;
 
             try {
-
                 const content = data.choices[0].message.content.trim();
-
                 const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
-                                  content.match(/```\s*([\s\S]*?)\s*```/) || 
-                                  [null, content];
+                                 content.match(/```\s*([\s\S]*?)\s*```/) || 
+                                 [null, content];
 
                 const cleanJson = jsonMatch[1].replace(/[\n\r]/g, '').trim();
                 rhymes = JSON.parse(cleanJson);
 
                 if (!Array.isArray(rhymes)) {
-
                     const keys = Object.keys(rhymes);
                     if (keys.length === 1 && Array.isArray(rhymes[keys[0]])) {
                         rhymes = rhymes[keys[0]];
@@ -1010,7 +907,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) {
                 console.error("Failed to parse JSON response:", e);
-
                 const content = data.choices[0].message.content;
                 rhymes = content.match(/"([^"]+)"/g)?.map(word => word.replace(/"/g, '')) || 
                         content.split(/[\s,\n]+/).filter(w => w.length > 1);
@@ -1029,7 +925,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span>Error retrieving rhymes. Please check your API key and try again.</span>
                 </div>`;
         } finally {
-
             rhymeLoading.style.display = 'none';
         }
     }
@@ -1040,14 +935,12 @@ document.addEventListener('DOMContentLoaded', () => {
         rhymes.forEach(rhyme => {
             const suggestionEl = document.createElement('div');
             suggestionEl.className = 'rhyme-suggestion';
-
             suggestionEl.innerHTML = `
                 <span class="rhyme-suggestion-word">${rhyme}</span>
                 <button class="use-rhyme-btn" data-word="${rhyme}">
                     Use <span class="material-icons-round">add</span>
                 </button>
             `;
-
             rhymeResults.appendChild(suggestionEl);
         });
 
@@ -1063,12 +956,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!editor.value || editor.disabled) return;
 
         const position = editor.selectionEnd;
-
         const content = editor.value;
         const newContent = content.substring(0, position) + word + content.substring(position);
 
         editor.value = newContent;
-
         const newPosition = position + word.length;
         editor.setSelectionRange(newPosition, newPosition);
 
@@ -1076,9 +967,155 @@ document.addEventListener('DOMContentLoaded', () => {
         editor.dispatchEvent(inputEvent);
 
         hideRhymeModal();
-
         editor.focus();
     }
 
+    // Mobile scrolling optimizations
+    function setupMobileScrolling() {
+        if (!('ontouchstart' in window)) return;
+        
+        const editorWrapper = document.querySelector('.editor-wrapper');
+        const previewWrapper = document.querySelector('.preview-wrapper');
+        
+        // Optimize editor scrolling on mobile
+        if (editor) {
+            editor.addEventListener('touchstart', function(e) {
+                e.stopPropagation();
+                if (this.scrollHeight > this.clientHeight) {
+                    this.classList.add('scrollable-active');
+                }
+            }, { passive: true });
+            
+            editor.style.webkitOverflowScrolling = 'touch';
+        }
+        
+        // Optimize preview scrolling
+        if (previewWrapper) {
+            previewWrapper.addEventListener('touchstart', function(e) {
+                if (this.scrollHeight > this.clientHeight) {
+                    this.classList.add('scrollable-active');
+                }
+            }, { passive: true });
+        }
+        
+        // Apply optimizations on document load
+        if (editorWrapper) editorWrapper.style.webkitOverflowScrolling = 'touch';
+        if (previewWrapper) previewWrapper.style.webkitOverflowScrolling = 'touch';
+    }
+
+    // Import functionality
+    function showImportModal() {
+        importModal.classList.add('show');
+        clearSelectedFile();
+        importConfirmBtn.disabled = true;
+    }
+    
+    function hideImportModal() {
+        importModal.classList.remove('show');
+        clearSelectedFile();
+    }
+    
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        fileName.textContent = file.name;
+        fileUploadInfo.classList.add('show');
+        importConfirmBtn.disabled = false;
+    }
+    
+    function clearSelectedFile() {
+        fileUpload.value = '';
+        fileName.textContent = '';
+        fileUploadInfo.classList.remove('show');
+        importConfirmBtn.disabled = true;
+    }
+    
+    function setupDragAndDrop() {
+        const events = ['dragenter', 'dragover', 'dragleave', 'drop'];
+        events.forEach(eventName => {
+            fileUploadLabel.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileUploadLabel.addEventListener(eventName, () => {
+                fileUploadLabel.classList.add('drag-over');
+            }, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileUploadLabel.addEventListener(eventName, () => {
+                fileUploadLabel.classList.remove('drag-over');
+            }, false);
+        });
+        
+        fileUploadLabel.addEventListener('drop', e => {
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                if (fileExtension === 'md' || fileExtension === 'txt') {
+                    fileUpload.files = e.dataTransfer.files;
+                    handleFileSelect({ target: { files: e.dataTransfer.files } });
+                } else {
+                    showFileTypeError();
+                }
+            }
+        }, false);
+    }
+    
+    function importFile() {
+        const file = fileUpload.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+            
+            const newFileObj = {
+                id: Date.now().toString(),
+                title: nameWithoutExt || 'Imported Lyrics',
+                content: e.target.result,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            files.unshift(newFileObj);
+            saveFilesToStorage();
+            renderFilesList();
+            loadFile(newFileObj.id);
+            enableEditor();
+            
+            hideImportModal();
+            showSaveIndicator();
+        };
+        
+        reader.readAsText(file);
+    }
+
+    function showFileTypeError() {
+        const errorEl = document.createElement('div');
+        errorEl.className = 'file-upload-error';
+        errorEl.innerHTML = `
+            <span class="material-icons-round">error</span>
+            <span>Only .md and .txt files are supported.</span>
+        `;
+        
+        const uploadContainer = document.querySelector('.file-upload-container');
+        const existingError = uploadContainer.querySelector('.file-upload-error');
+        if (existingError) existingError.remove();
+        
+        uploadContainer.appendChild(errorEl);
+        fileUploadLabel.classList.add('file-type-error');
+        
+        setTimeout(() => {
+            errorEl.remove();
+            fileUploadLabel.classList.remove('file-type-error');
+        }, 3000);
+    }
+
+    // Initialize the application
     init();
 });
